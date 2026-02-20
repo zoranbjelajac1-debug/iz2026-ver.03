@@ -144,7 +144,36 @@ justify-content:space-between;
 align-items:center;
 cursor:pointer;
 }
-@media (max-width:640px){
+@media (max-width:640px){@media (max-width:640px){
+
+header{font-size:18px}
+.section{margin:8px;padding:12px}
+input,button{font-size:14px;padding:12px}
+
+/* Tablica bez horizontalnog scrolla */
+table{
+    width:100%;
+    font-size:11px;
+}
+
+th,td{
+    white-space:normal;      /* dozvoli lom teksta */
+    word-break:break-word;   /* lomi duge nazive */
+    padding:6px 4px;
+}
+
+/* Raspodjela širina stupaca */
+th:nth-child(1), td:nth-child(1){ width:8%; }   /* Rb */
+th:nth-child(2), td:nth-child(2){ width:18%; }  /* Šifra */
+th:nth-child(3), td:nth-child(3){ width:40%; }  /* Naziv */
+th:nth-child(4), td:nth-child(4){ width:20%; }  /* Kol */
+th:nth-child(5), td:nth-child(5){ width:14%; }  /* X */
+
+.qty-input{
+    min-width:55px;
+    font-size:12px;
+}
+}
 header{font-size:19px}
 .section{margin:10px 10px;padding:14px}
 input,button{font-size:15px;padding:13px}
