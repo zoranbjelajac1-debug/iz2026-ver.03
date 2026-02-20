@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1976d2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Otpremnice PRO ver.03</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+:root{
+--blue:#1976d2;
+--blue-dark:#135ea7;
+--red:#d32f2f;
+--bg:#eef2f6;
+--card:#ffffff;
+--text:#1b1f23;
+--muted:#667085;
+--radius:14px;
+--shadow:0 6px 20px rgba(27,31,35,.08);
+}
+*{box-sizing:border-box}
+body{
+font-family:Arial, sans-serif;
+margin:0;
+background:linear-gradient(180deg,#f6f8fb 0%, var(--bg) 100%);
+color:var(--text);
+padding-bottom:90px;
+}
+header{
+background:linear-gradient(135deg,var(--blue),#1e88e5);
+color:#fff;
+padding:18px 16px;
+text-align:center;
+font-size:20px;
+font-weight:bold;
+letter-spacing:.2px;
+position:sticky;
+top:0;
+z-index:5;
+box-shadow:0 4px 14px rgba(0,0,0,.14);
+}
+.container{
+max-width:760px;
+margin:0 auto;
+}
+.section{
+background:var(--card);
+margin:12px 12px;
+padding:16px;
+border-radius:var(--radius);
+box-shadow:var(--shadow);
+border:1px solid #edf0f4;
+}
+.section h3{
+margin:0 0 6px 0;
+font-size:17px;
+}
+label, .small{font-size:13px;color:var(--muted)}
+input,button{
+width:100%;
+padding:14px 14px;
+margin-top:10px;
+font-size:16px;
+border-radius:12px;
+border:1px solid #d7dbe1;
+background:#fff;
+transition:box-shadow .15s ease,border-color .15s ease,transform .02s ease;
+}
+input:focus{
+outline:none;
+border-color:var(--blue);
+box-shadow:0 0 0 3px rgba(25,118,210,.15);
+}
+button{
+background:var(--blue);
+color:#fff;
+border:none;
+font-weight:bold;
+letter-spacing:.2px;
+box-shadow:0 6px 14px rgba(25,118,210,.25);
+}
+button:active{transform:translateY(1px)}
+button.red{background:var(--red);box-shadow:0 6px 14px rgba(211,47,47,.25)}
+table{
+width:100%;
+border-collapse:collapse;
+font-size:13px;
+margin-top:12px;
+}
+th,td{border:1px solid #e6e9ee;padding:8px 6px}
+th{
+background:#f4f6f9;
+color:#445066;
+font-weight:600;
+}
+.qty-cell{min-width:92px}
+.qty-input{
+width:100%;
+min-width:72px;
+padding:8px 10px;
+text-align:right;
+}
+.actions-cell{width:44px}
+.icon-btn{
+width:34px;
+min-width:34px;
+padding:6px 0;
+line-height:1;
+border-radius:10px;
+}
+.icon-btn.red{box-shadow:none}
+.fixed{
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#fff;
+padding:12px 12px calc(12px + env(safe-area-inset-bottom));
+box-shadow:0 -6px 16px rgba(0,0,0,.12);
+border-top:1px solid #eef0f4;
+z-index:6;
+}
+.fixed button{margin-top:0}
+#scannerWrapper{
+margin-top:10px;
+border:1px dashed #d7dbe1;
+border-radius:12px;
+padding:10px;
+background:#fafbfc;
+}
+.collapseHeader{
+display:flex;
+justify-content:space-between;
+align-items:center;
+cursor:pointer;
+}
+@media (max-width:640px){
+header{font-size:19px}
+.section{margin:10px 10px;padding:14px}
+input,button{font-size:15px;padding:13px}
+table{font-size:12px;display:block;overflow-x:auto}
+th,td{white-space:nowrap}
+}
+</style>
+</head>
+<body>
+
+<header>Otpremnice PRO</header>
+
+<main class="container">
+
+<!-- IMPORT SEKCIJA -->
+<div class="section">
+<h3 class="collapseHeader" onclick="toggleImport()">
+    Import podataka
+    <span id="importArrow">▼</span>
+</h3>
+
+<div id="importContent" style="display:none">
+
+<input type="file" id="artikliFile">
+<button onclick="importArtikli()">Import Artikli (šifra;naziv;bar)</button>
+
+<input type="file" id="kupciFile">
+<button onclick="importKupci()">Import Kupci (naziv;adresa)</button>
+
+</div>
+</div>
+
+<!-- KUPAC -->
+<div class="section">
+<h3>Kupac</h3>
+<input list="kupciList" id="kupacInput" placeholder="Pretraži kupca">
+<datalist id="kupciList"></datalist>
+</div>
+
+<!-- ARTIKLI -->
+<div class="section">
+<h3>Dodavanje artikla</h3>
+
+<input list="artikliList" id="artiklInput" placeholder="Pretraži artikl">
+<datalist id="artikliList"></datalist>
+
+<button onclick="pokreniScanner()">📷 SKENIRAJ</button>
+
+<div id="scannerWrapper" style="display:none">
+    <div id="scanner"></div>
+    <button class="red" onclick="zatvoriScanner()">❌ ZATVORI SKENER</button>
+</div>
+
+<input type="number" id="kolicinaInput" placeholder="Količina">
+<button onclick="dodajArtikl()">Dodaj</button>
+
+<table>
+<thead>
+<tr>
+<th>Rb</th>
+<th>Šifra</th>
+<th>Naziv</th>
+<th>Kol</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="stavkeBody"></tbody>
+</table>
+
+</div>
+
+<!-- ARHIVA -->
+<div class="section">
+<h3>Arhiva</h3>
+<table>
+<thead>
+<tr>
+<th>Broj</th>
+<th>Datum</th>
+<th>Kupac</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="arhivaBody"></tbody>
+</table>
+</div>
+
+<div class="fixed">
+<button onclick="spremiOtpremnicu()">SPREMI OTPREMNICU</button>
+</div>
+</main>
+
+<script>
+
+let artikli=JSON.parse(localStorage.getItem("artikli"))||[];
+let kupci=JSON.parse(localStorage.getItem("kupci"))||[];
+let arhiva=JSON.parse(localStorage.getItem("arhiva"))||[];
+let stavke=[];
+let scanner=null;
+
+/* ================= COLLAPSE IMPORT ================= */
+
+function toggleImport(){
+let content=document.getElementById("importContent");
+let arrow=document.getElementById("importArrow");
+
+if(content.style.display==="none"){
+content.style.display="block";
+arrow.innerHTML="▲";
+}else{
+content.style.display="none";
+arrow.innerHTML="▼";
+}
+}
+
+/* ================= FORMAT ================= */
+
+function formatDatum(d){
+return new Date(d).toLocaleDateString("hr-HR");
+}
+
+/* ================= OSVJEŽI LISTE ================= */
+
+function osvjeziListe(){
+artikliList.innerHTML="";
+artikli.forEach(a=>{
+let o=document.createElement("option");
+o.value=a.naziv;
+artikliList.appendChild(o);
+});
+
+kupciList.innerHTML="";
+kupci.forEach(k=>{
+let o=document.createElement("option");
+o.value=k.naziv;
+kupciList.appendChild(o);
+});
+}
+
+/* ================= IMPORT ================= */
+
+function importArtikli(){
+let f=artikliFile.files[0];
+if(!f) return;
+
+let r=new FileReader();
+r.onload=e=>{
+artikli=e.target.result.split("\n").map(x=>{
+let c=x.split(";");
+return{ sifra:c[0],naziv:c[1],bar:c[2] };
+});
+localStorage.setItem("artikli",JSON.stringify(artikli));
+osvjeziListe();
+alert("Artikli učitani");
+};
+r.readAsText(f);
+}
+
+function importKupci(){
+let f=kupciFile.files[0];
+if(!f) return;
+
+let r=new FileReader();
+r.onload=e=>{
+kupci=e.target.result.split("\n").map(x=>{
+let c=x.split(";");
+return{ naziv:c[0],adresa:c[1] };
+});
+localStorage.setItem("kupci",JSON.stringify(kupci));
+osvjeziListe();
+alert("Kupci učitani");
+};
+r.readAsText(f);
+}
+
+/* ================= STAVKE ================= */
+
+function dodajArtikl(){
+let naziv=artiklInput.value;
+let kol=kolicinaInput.value;
+let a=artikli.find(x=>x.naziv===naziv);
+if(!a||!kol)return alert("Provjeri unos");
+
+stavke.push({...a,kolicina:kol});
+prikaziStavke();
+
+artiklInput.value="";
+kolicinaInput.value="";
+}
+
+function prikaziStavke(){
+stavkeBody.innerHTML="";
+stavke.forEach((s,i)=>{
+stavkeBody.innerHTML+=`
+<tr>
+<td>${i+1}</td>
+<td>${s.sifra}</td>
+<td>${s.naziv}</td>
+<td class="qty-cell">
+<input class="qty-input" type="number" value="${s.kolicina}"
+onchange="promijeniKolicinu(${i}, this.value)">
+</td>
+<td class="actions-cell"><button class="icon-btn red" onclick="obrisi(${i})">X</button></td>
+</tr>`;
+});
+}
+
+function promijeniKolicinu(i,val){
+stavke[i].kolicina=val;
+}
+
+function obrisi(i){
+stavke.splice(i,1);
+prikaziStavke();
+}
+
+/* ================= SKENER ================= */
+
+function pokreniScanner(){
+
+document.getElementById("scannerWrapper").style.display="block";
+scanner=new Html5Qrcode("scanner");
+
+Html5Qrcode.getCameras().then(devices=>{
+
+let cameraId=devices[devices.length-1].id;
+
+scanner.start(cameraId,{fps:10,qrbox:250},
+decoded=>{
+
+let kod=decoded.trim();
+let a=artikli.find(x=>x.bar && x.bar.trim()===kod);
+
+if(a){
+artiklInput.value=a.naziv;
+kolicinaInput.value=1;
+navigator.vibrate(200);
+}else{
+alert("Artikl s bar kodom "+kod+" nije pronađen");
+}
+
+zatvoriScanner();
+});
+});
+}
+
+function zatvoriScanner(){
+if(scanner){
+scanner.stop().then(()=>{
+scanner.clear();
+}).catch(()=>{});
+}
+document.getElementById("scannerWrapper").style.display="none";
+}
+
+/* ================= SPREMANJE ================= */
+
+function spremiOtpremnicu(){
+if(stavke.length===0)return alert("Nema stavki");
+
+let godina=new Date().getFullYear();
+let zadnji=parseInt(localStorage.getItem("brojOtp")||1);
+let broj=godina+" / "+zadnji;
+localStorage.setItem("brojOtp",zadnji+1);
+
+let kupacNaziv=kupacInput.value;
+let kupac=kupci.find(k=>k.naziv===kupacNaziv);
+
+let otpremnica={
+broj,
+datum:new Date(),
+kupacNaziv,
+adresa:kupac?kupac.adresa:"",
+stavke:[...stavke]
+};
+
+arhiva.push(otpremnica);
+localStorage.setItem("arhiva",JSON.stringify(arhiva));
+
+generirajPDF(otpremnica);
+
+stavke=[];
+prikaziStavke();
+prikaziArhivu();
+}
+
+/* ================= ARHIVA ================= */
+
+function prikaziArhivu(){
+arhivaBody.innerHTML="";
+let sortirano=[...arhiva].reverse();
+
+sortirano.forEach(a=>{
+arhivaBody.innerHTML+=`
+<tr>
+<td>${a.broj}</td>
+<td>${formatDatum(a.datum)}</td>
+<td>${a.kupacNaziv}</td>
+<td><button onclick='generirajPDF(${JSON.stringify(a)})'>PDF</button></td>
+</tr>`;
+});
+}
+
+/* ================= PDF ================= */
+
+function generirajPDF(o){
+
+const { jsPDF } = window.jspdf;
+let doc = new jsPDF();
+let pageWidth = doc.internal.pageSize.width;
+let pageHeight = doc.internal.pageSize.height;
+
+function header(){
+doc.setFontSize(14);
+doc.text("OTPREMNICA", pageWidth/2, 15, null, null, "center");
+
+doc.setFontSize(10);
+doc.text("Naziv prodavatelja: IŽANKA - ZADAR d.o.o", 14, 25);
+doc.text("Kupac: " + (o.kupacNaziv || ""), 14, 32);
+doc.text("Adresa: " + (o.adresa || ""), 14, 38);
+
+doc.text("Broj: " + o.broj, 150, 25);
+doc.text("Datum: " + formatDatum(o.datum), 150, 32);
+}
+
+let body = o.stavke.map((s,i)=>[
+i+1,
+s.sifra,
+s.naziv,
+s.bar,
+s.kolicina
+]);
+
+doc.autoTable({
+startY: 50,
+margin: { top: 50 },
+head: [['Rb','Šifra','Naziv artikla','Bar kod','Kom']],
+body: body,
+theme: 'grid',
+didDrawPage: function () {
+header();
+}
+});
+
+
+// ===== POTPISI =====
+let finalY = doc.lastAutoTable.finalY + 20;
+
+if(finalY > pageHeight - 30){
+doc.addPage();
+finalY = 30;
+}
+doc.setFontSize(10)
+doc.line(20, finalY, 90, finalY);
+doc.line(120, finalY, 190, finalY);
+doc.text("Potpis prodavatelja", 20, finalY+8);
+doc.text("Potpis kupca", 120, finalY+8);
+
+
+// ===== ISPRAVNO NUMERIRANJE STRANICA =====
+let totalPages = doc.getNumberOfPages();
+
+for(let i=1; i<=totalPages; i++){
+doc.setPage(i);
+doc.setFontSize(9);
+doc.text(
+i + "/" + totalPages,
+pageWidth - 25,
+pageHeight - 10
+);
+}
+
+doc.save("Otpremnica_" + o.broj + ".pdf");
+}
+
+osvjeziListe();
+prikaziArhivu();
+
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
